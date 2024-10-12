@@ -1,0 +1,21 @@
+[package]
+name = "rusfind"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.3"
+criterion = "0.5.1"
+
+[lib]
+name = "rusfind"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rusfind"
+path = "src/main.rs"
