@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};  // For thread-safe access
+use rayon::prelude::*;
 
 /// Options for searching files and directories
 #[derive(Clone)]
@@ -12,48 +14,55 @@ pub struct SearchOptions<'a> {
 /// Performs a breadth-first search to find files and dirs
 
 pub fn bfs_search(root: &Path, options: SearchOptions) -> Vec<PathBuf> {
-    let mut results = Vec::new();
-    let mut queue = VecDeque::new();
-    queue.push_back(PathBuf::from(root));
+    // let mut results = Vec::new();
+    let results = Arc::new(Mutex::new(Vec::new()));
+    let mut queue = Arc::new((Mutex::new(VecDeque::new())));
+    queue.lock().unwrap().push_back(PathBuf::from(root));
 
-    while let Some(current_path) = queue.pop_front() {
+    while let Some(current_path) = queue.lock().unwrap().pop_front() {
         if let Ok(entries) = fs::read_dir(&current_path) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    let file_name = entry.file_name();
-                    let file_name = file_name.to_string_lossy();
+            // Convert entries into a parallel iterator using rayon
+            let entries: Vec<_> = entries.filter_map(Result::ok).collect();
+            entries.par_iter().for_each(|entry| {
+                let path = entry.path();
+                let file_name = entry.file_name();
+                let file_name = file_name.to_string_lossy();
 
-                    // Filter with given pattern
-                    if let Some(pattern) = options.name_pattern {
-                        if !file_name.contains(pattern) {
-                            continue;
-                        }
-                    }
-
-                    // Filter by file type
-                    let is_file = path.is_file();
-                    let is_dir = path.is_dir();
-
-                    if let Some(file_type) = options.file_type {
-                        if file_type == "f" && !is_file {
-                            continue;
-                        } else if file_type == "d" && !is_dir {
-                            continue;
-                        }
-                    }
-
-                    results.push(path.clone());
-
-                    if is_dir {
-                        queue.push_back(path);
+                // Filter with given pattern
+                if let Some(pattern) = options.name_pattern {
+                    if !file_name.contains(pattern) {
+                        return;
                     }
                 }
-            }
+
+                // Filter by file type
+                let is_file = path.is_file();
+                let is_dir = path.is_dir();
+
+                if let Some(file_type) = options.file_type {
+                    if file_type == "f" && !is_file {
+                        return;
+                    } else if file_type == "d" && !is_dir {
+                        return;
+                    }
+                }
+
+                let mut results_lock = results.lock().unwrap();
+                results_lock.push(path.clone());
+
+                if is_dir {
+                    let mut queue_lock = queue.lock().unwrap();
+                    queue_lock.push_back(path);
+                }
+            });
         }
     }
 
-    results
+    let final_results = Arc::try_unwrap(results)
+        .unwrap()
+        .into_inner()
+        .unwrap();
+    final_results
 }
 
 

@@ -1,5 +1,6 @@
 use clap::Parser;
 use std::path::Path;
+use rayon::ThreadPoolBuilder;
 use crate::search::bfs::{bfs_search, SearchOptions};
 
 #[derive(Parser, Default, Debug)]
@@ -14,6 +15,8 @@ pub struct Cli {
     name: String,
     #[arg(short='t', long="f_type", help="Specify 'f' for files or 'd' for directories")]
     f_type: String,
+    #[arg(short='r', long="threads", help="Number of threads to use for parallelism")]
+    threads: usize,
 }
 /// Runs the CLI application.
 pub fn run() {
@@ -22,6 +25,10 @@ pub fn run() {
     let path = cli.path;
     let name_pattern = Some(cli.name.as_str());
     let file_type = Some(cli.f_type.as_str());
+    let num_threads: usize = cli.threads;
+
+    // Set the number of threads for Rayon
+    ThreadPoolBuilder::new().num_threads(num_threads).build_global().unwrap();
 
     let options = SearchOptions {
         name_pattern,
