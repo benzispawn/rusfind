@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Options for searching files and directories
+#[derive(Clone)]
 pub struct SearchOptions<'a> {
     pub name_pattern: Option<&'a str>,
     pub file_type: Option<&'a str>,

@@ -1,4 +1,4 @@
-use clap::{Parser,Arg, Command, command};
+use clap::Parser;
 use std::path::Path;
 use crate::search::bfs::{bfs_search, SearchOptions};
 
