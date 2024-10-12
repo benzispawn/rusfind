@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};  // For thread-safe access
 use rayon::prelude::*;
+use crate::search::metadata_cache::MetadataCache;
 
 /// Options for searching files and directories
 #[derive(Clone)]
@@ -17,6 +18,8 @@ pub fn bfs_search(root: &Path, options: SearchOptions) -> Vec<PathBuf> {
     // let mut results = Vec::new();
     let results = Arc::new(Mutex::new(Vec::new()));
     let queue = Arc::new(Mutex::new(VecDeque::new()));
+    let metadata_cache = Arc::new(Mutex::new(MetadataCache::new()));
+
     queue.lock().unwrap().push_back(PathBuf::from(root));
 
     while let Some(current_path) = queue.lock().unwrap().pop_front() {
@@ -35,25 +38,34 @@ pub fn bfs_search(root: &Path, options: SearchOptions) -> Vec<PathBuf> {
                     }
                 }
 
-                // Filter by file type
-                let is_file = path.is_file();
-                let is_dir = path.is_dir();
+                // Get metadata from cache or file system
+                let metadata = {
+                    let cache = metadata_cache.lock().unwrap();
+                    cache.get_metadata(&path)
+                };
 
-                if let Some(file_type) = options.file_type {
-                    if file_type == "f" && !is_file {
-                        return;
-                    } else if file_type == "d" && !is_dir {
-                        return;
+                if let Some(metadata) = metadata {
+                    // Filter by file type
+                    let is_file = metadata.is_file();
+                    let is_dir = metadata.is_dir();
+
+                    if let Some(file_type) = options.file_type {
+                        if file_type == "f" && !is_file {
+                            return;
+                        } else if file_type == "d" && !is_dir {
+                            return;
+                        }
+                    }
+
+                    let mut results_lock = results.lock().unwrap();
+                    results_lock.push(path.clone());
+
+                    if is_dir {
+                        let mut queue_lock = queue.lock().unwrap();
+                        queue_lock.push_back(path);
                     }
                 }
 
-                let mut results_lock = results.lock().unwrap();
-                results_lock.push(path.clone());
-
-                if is_dir {
-                    let mut queue_lock = queue.lock().unwrap();
-                    queue_lock.push_back(path);
-                }
             });
         }
     }
