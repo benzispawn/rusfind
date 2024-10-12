@@ -16,7 +16,7 @@ pub struct SearchOptions<'a> {
 pub fn bfs_search(root: &Path, options: SearchOptions) -> Vec<PathBuf> {
     // let mut results = Vec::new();
     let results = Arc::new(Mutex::new(Vec::new()));
-    let mut queue = Arc::new((Mutex::new(VecDeque::new())));
+    let queue = Arc::new((Mutex::new(VecDeque::new())));
     queue.lock().unwrap().push_back(PathBuf::from(root));
 
     while let Some(current_path) = queue.lock().unwrap().pop_front() {
