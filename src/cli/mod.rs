@@ -15,7 +15,7 @@ pub struct Cli {
     name: String,
     #[arg(short='t', long="f_type", help="Specify 'f' for files or 'd' for directories")]
     f_type: String,
-    #[arg(short='r', long="threads", help="Number of threads to use for parallelism")]
+    #[arg(short='r', long="threads", default_value_t = 2, help="Number of threads to use for parallelism")]
     threads: usize,
 }
 /// Runs the CLI application.
@@ -39,6 +39,8 @@ pub fn run() {
     let results = bfs_search(root, options);
 
     for path in results {
-        println!("{}", path.display());
+        // println!("{}", path.display());
+        println!("{}", path);
     }
+
 }
