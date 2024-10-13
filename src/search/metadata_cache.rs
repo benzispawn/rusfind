@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{PathBuf};
-use std::sync::{Arc, Mutex};  // To share cache across threads
+use std::sync::Mutex;  // To share cache across threads
 
 /// Structure to cache metadata for files and directories.
 #[derive(Default)]
